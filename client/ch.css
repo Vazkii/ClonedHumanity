@@ -1,0 +1,15 @@
+.navbar, .navbar-inverse {
+	background-color: #F44336;
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.26);
+}
+
+.navbar-brand sub {
+    margin-left: -150px;
+    font-size: 10px;
+    bottom: -16px;
+}
+
+.page-contents {
+	margin-top: 80px;
+	margin-bottom: 60px;
+}

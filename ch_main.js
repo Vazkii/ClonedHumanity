@@ -10,6 +10,12 @@ var util = require('util');
 var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 var port = config['port'];
 
+var responses = {
+	'/': 'index.html',
+	'/?css': 'ch.css',
+	'/?js': 'ch_client.js'
+};
+
 var GameServer = function() {
 	this.games = [];
 	this.players = {};
@@ -17,7 +23,12 @@ var GameServer = function() {
 var gameserver = new GameServer();
 
 app.get('/', function(req, res){
-  res.sendFile(__dirname + '/client/index.html');
+	//res.send(util.inspect(req, false, null));
+	var url = req['url'];
+	
+	if(url in responses)
+		res.sendFile(__dirname + '/client/' + responses[url]);
+	else res.send('No known response for ' + url);
 });
 
 http.listen(port, function() {

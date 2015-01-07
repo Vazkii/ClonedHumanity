@@ -1,11 +1,14 @@
 var fs = require('fs');
-var http = require('http');
+var app = require('express')();
+var http = require('http').Server(app);
 
 var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 var port = config['port'];
 
-http.createServer(function (req, res) {
-  res.writeHead(200, {'Content-Type': 'text/plain'});
-  res.end('Test... WIP');
-}).listen(port, '127.0.0.1');
-console.log('HTTP Server running on port ' + port);
+app.get('/', function(req, res){
+  res.sendFile(__dirname + '/client/index.html');
+});
+
+http.listen(port, function() {
+	console.log('HTTP Server running on port ' + port);
+});

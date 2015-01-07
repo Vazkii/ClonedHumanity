@@ -9,9 +9,10 @@ is a [Cards Against Humanity](http://cardsagainsthumanity.com/) clone running on
 git clone https://github.com/Vazkii/ClonedHumanity.git
 ```
 * [Download and install node](http://nodejs.org/download/)
-* Install socket.io
+* Install socket.io and express
 ```
   npm install socket.io
+  npm install express
 ```
 * (Optional) Configure the instalation by editing [config.json](https://github.com/Vazkii/ClonedHumanity/blob/master/config.json).
 * Run the server

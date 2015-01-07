@@ -13,7 +13,7 @@ git clone https://github.com/Vazkii/ClonedHumanity.git
 ```
   npm install socket.io
 ```
-* (Optional) Configure the instalation by editing [config.json]([https://github.com/Vazkii/ClonedHumanity/blob/master/config.json).
+* (Optional) Configure the instalation by editing [config.json](https://github.com/Vazkii/ClonedHumanity/blob/master/config.json).
 * Run the server
 ```
  node ch_main.js

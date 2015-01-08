@@ -23,14 +23,6 @@ $(".cah-card").click(function() {
 	}
 });
 
-if(!isMobile())
-	$('#chat-input').focusout(function() {
-		var el = $(this);
-		setTimeout(function() {
-			el.focus();
-		});
-	});
-
 $(document).keypress(function(e) {
     if(e.which == 13)
 		sendChatFromInput();
@@ -94,12 +86,6 @@ function sendChat(text) {
 		var contents = $('#chat-messages');
 		contents.append("<li><div class='chat-message-container'>" + text + "</div></li>");
 	}
-}
-
-// Utils
-
-function isMobile() {
-	return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
 function clean(text) {

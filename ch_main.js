@@ -27,7 +27,7 @@ app.get('/', function(req, res){
 	var url = req['url'];
 	
 	if(url in responses)
-		res.sendFile(__dirname + '/client/' + responses[url]);
+		res.sendFile(__dirname + '/public/' + responses[url]);
 	else res.send('No known response for ' + url);
 });
 

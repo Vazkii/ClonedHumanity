@@ -47,6 +47,10 @@
 	color: #FFFFFF;
 }
 
+.card-selector-checkbox[checked] {
+	display: none;
+}
+
 .card-text {
 	font-size: 17px;
 	height: 125px;
@@ -80,8 +84,64 @@
 
 #chatbox {
     position: fixed;
-    bottom: 60;
+    bottom: 0;
     width: 100%;
     background-color: #FFFFFF;
     box-shadow: 0 0px 3px rgba(0, 0, 0, 0.26);
+}
+
+#chat-header {
+	display: block;
+	height: 40px;
+	line-height: 40px;
+	padding-left: 20px;
+	font-size: 20px;
+	border-bottom: 1px #CCCCCC solid;
+}
+
+#chat-contents {
+	list-style: none;
+}
+
+#chat-contents li { 
+	padding-left: 10px;
+	padding-top: 2px; 
+}
+
+#chat-contents li:nth-child(odd) { 
+	background-color: #EEEEEE; 
+}
+
+#chat-field {
+	position: fixed;
+	bottom: 0;
+	width: 100%;
+	height: 40px;
+	line-height: 40px;
+	border-top: 1px #CCCCCC solid;
+}
+
+#username-field {
+	display: inline-block;
+	border-right: 1px #CCCCCC solid;
+	padding-left: 10px;
+	padding-right: 10px;
+	vertical-align: top;
+	font-weight: bold;
+}
+
+#chat-input {
+	display: inline-block;
+	padding-left: 10px;
+	margin-left: -3px;
+	height: 40px;
+	border: none;
+	background-color: #EEEEEE; 
+}
+
+#send-msg-button {
+	position: absolute;
+	bottom: 10px;
+	right: 20px;
+	background-color: #F44336;
 }

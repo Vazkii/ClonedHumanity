@@ -1,23 +1,43 @@
 var socket;
 
+var username = 'TestUser';
+
 $(function() {
 	$.material.init();
 	socket = io();
-	
-	setChatboxHeight();
+
 	// TODO
 	populateCards();
+	setUsernameField();
+	onResize();
 });
 
 $(".cah-card").click(function() {
-	var selected = $(this).hasClass('selected-card');
-	if(!selected) {
+	if(!$(this).hasClass('selected-card') && !$(this).hasClass('cah-card-black')) {
 		deselectCards();
 		$(this).addClass('selected-card');
 		var checkbox = $(this).find('.card-checkbox');
 		checkbox.fadeIn(400).css('display', 'inline-block');
 	}
 });
+
+$('#chat-input').focusout(function() {
+	var el = $(this);
+	setTimeout(function() {
+		el.focus();
+	});
+});
+
+$(document).keypress(function(e) {
+    if(e.which == 13)
+		sendChatFromInput();
+});
+
+function onResize() {
+	$('#chatbox').height($(document).height() - $('#playfield').outerHeight() - $('#the-navbar').outerHeight());
+	$('#chat-input').width($(document).width() - $('#username-field').outerWidth() - 15);
+}
+$(window).resize(onResize);
 
 function deselectCards() {
 	$('.selected-card').each(function(e) {
@@ -27,15 +47,9 @@ function deselectCards() {
 	});
 }
 
-
-function setChatboxHeight() {
-	$('#chatbox').height($(document).height() - $('#playfield').height() - $('#the-navbar').height() - 40);
-}
-$(window).resize(setChatboxHeight);
-
 function populateCards() {
 	$('.cah-card').each(function(e) {
-		var html = "<div class='card-text'>" + findSpaces($(this).attr('data-text')) + "</div><div class='card-deck'><div class='checkbox card-checkbox'><label><input type='checkbox' disabled='true' checked='true'></label></div>" + $(this).attr('data-deck') + "</div>";
+		var html = "<div class='card-text'>" + findSpaces($(this).attr('data-text')) + "</div><div class='card-deck'><div class='checkbox card-checkbox'><label><input type='checkbox' class='card-selector-checkbox' disabled='true' checked></label></div>" + $(this).attr('data-deck') + "</div>";
 	
 		$(this).html(html);
 	});
@@ -45,4 +59,25 @@ function populateCards() {
 
 function findSpaces(str) {
 	return str.replace("_", "<b>___</b>");
+}
+
+function setUsernameField() {
+	$('#username-field').text(username);
+}
+
+
+function sendChatFromInput() {
+	var text = "<b>" + username + ":</b> " + clean($('#chat-input').val());
+	sendChat(text);
+	$('#chat-input').val('');
+}
+$('#send-msg-button').click(sendChatFromInput);
+
+function sendChat(text) {
+	if(text.length > 0)
+		$('#chat-contents').append("<li>" + text + "</li>");
+}
+
+function clean(text) {
+	return $('<b></b>').text(text).html();
 }

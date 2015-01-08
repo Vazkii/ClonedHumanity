@@ -67,9 +67,12 @@ function setUsernameField() {
 
 
 function sendChatFromInput() {
-	var text = "<b>" + username + ":</b> " + clean($('#chat-input').val());
-	sendChat(text);
-	$('#chat-input').val('');
+	var input = clean($('#chat-input').val());
+	if(input.length > 0) {
+		var text = "<b>" + username + ":</b> " + input;
+		sendChat(text);
+		$('#chat-input').val('');
+	}
 }
 $('#send-msg-button').click(sendChatFromInput);
 

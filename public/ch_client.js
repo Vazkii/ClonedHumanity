@@ -75,7 +75,6 @@ function sendChatFromInput() {
 		var text = "<b>" + username + ":</b> " + input;
 		sendChat(text);
 		$('#chat-input').val('');
-		updateSendButton();
 		contents.scrollTop(contents[0].scrollHeight);
 	}
 }

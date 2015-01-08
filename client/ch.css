@@ -38,6 +38,10 @@
 	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.26);
 }
 
+.cah-card:not(.cah-card-black) {
+	cursor: pointer;
+}
+
 .cah-card-black {
 	background-color: #222222;
 	color: #FFFFFF;
@@ -64,6 +68,14 @@
 .card-pick-radio {
 	margin-left: 128px;
 	margin-top: -165px;
+}
+
+.card-checkbox {
+	display: none;
+	margin-top: -11px;
+	margin-right: 24px;
+	padding-top: 1px;
+
 }
 
 #chatbox {

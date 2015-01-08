@@ -8,6 +8,7 @@ $(function() {
 
 	// TODO
 	populateCards();
+	populatePlayers();
 	setUsernameField();
 	onResize();
 });
@@ -38,6 +39,8 @@ function onResize() {
 	$('#chat-messages').width(docWidth - 200);
 	$('#chat-messages').height($('#chat-contents').height());
 	$('#spanel-lobby-interface').css('line-height', $('#chat-contents').height() + "px");
+	$('#spanel-player-list').height($('#chat-contents').height() - 20);
+	$('#chat-header-hint').width(docWidth - 217);
 }
 $(window).resize(onResize);
 
@@ -61,6 +64,18 @@ function populateCards() {
 
 function findSpaces(str) {
 	return str.replace("_", "<b>___</b>");
+}
+
+function populatePlayers() {
+	var players = 0;
+
+	$('.spanel-player-info').each(function(e) {
+		var html = "<div class='spanel-player-name'>" + $(this).attr('data-nickname') + "</div><div class='spanel-player-score'><b>" + $(this).attr('data-points') + "</b> points</div>";
+		$(this).html(html);
+		players++;
+	});
+	
+	$('#spanel-player-counter').html('<b>' + players + '</b> players');
 }
 
 function setUsernameField() {

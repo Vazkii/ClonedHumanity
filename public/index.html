@@ -53,7 +53,13 @@
 			
 			<div id="chatbox">
 				<div id="chat-header">
-					You are playing. Pick the <b>1</b> white card you think is funniest to fill in the black one.
+					<div id="chat-header-hint">
+						You are playing. Pick the <b>1</b> white card you think is funniest to fill in the black one.
+					</div>
+					
+					<div id="chat-header-container">
+						<span class='btn btn-flat btn-material-red'>Help</span>
+					</div>
 				</div>
 				
 				<div id="chat-contents">
@@ -61,16 +67,16 @@
 					
 					<div id="chat-side-panel">
 						<div id="spanel-game-interface">
-							<div id="spanel-game-list">
-								<div class="spanel-player" data-nickname="Vazkii"></div>
-								<div class="spanel-player" data-nickname="Dave"></div>
-								<div class="spanel-player" data-nickname="Arowyn"></div>
-								<div class="spanel-player" data-nickname="GoncasPls"></div>
-								<div class="spanel-player" data-nickname="darkforce04"></div>
+							<div id="spanel-player-list">
+								<div class="spanel-player-info" data-nickname="Vazkii" data-points="2"></div>
+								<div class="spanel-player-info" data-nickname="Xication" data-points="1"></div>
+								<div class="spanel-player-info" data-nickname="Arowyn" data-points="2"></div>
+								<div class="spanel-player-info" data-nickname="GoncasPls" data-points="2"></div>
+								<div class="spanel-player-info" data-nickname="AverageJoe" data-points="3"></div>
+								<div class="spanel-player-info" data-nickname="TestUser" data-points="3"></div>
 							</div>
-							<div id="spanel-player-counter">
-								<b>5</b> Players
-							</div>
+							
+							<div id="spanel-player-counter"></div>
 						</div>
 						
 						<div id="spanel-lobby-interface">

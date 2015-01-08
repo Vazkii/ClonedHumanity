@@ -69,6 +69,8 @@ function setUsernameField() {
 
 function sendChatFromInput() {
 	var input = clean($('#chat-input').val());
+	var contents = $('#chat-contents');
+	
 	if(input.length > 0) {
 		var text = "<b>" + username + ":</b> " + input;
 		sendChat(text);

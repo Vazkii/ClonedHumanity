@@ -14,10 +14,12 @@ $(function() {
 
 $(".cah-card").click(function() {
 	if(!$(this).hasClass('selected-card') && !$(this).hasClass('cah-card-black')) {
-		deselectCards();
-		$(this).addClass('selected-card');
 		var checkbox = $(this).find('.card-checkbox');
-		checkbox.fadeIn(400).css('display', 'inline-block');
+		if(checkbox.css('display') == 'none') {
+			deselectCards();
+			$(this).addClass('selected-card');
+			checkbox.fadeIn(400).css('display', 'inline-block');
+		}
 	}
 });
 

@@ -100,6 +100,7 @@
 }
 
 #chat-contents {
+	overflow-y: auto;
 	list-style: none;
 }
 
@@ -128,6 +129,7 @@
 	padding-right: 10px;
 	vertical-align: top;
 	font-weight: bold;
+	background-color: #DDDDDD;
 }
 
 #chat-input {

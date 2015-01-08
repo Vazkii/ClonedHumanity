@@ -36,6 +36,7 @@ $(document).keypress(function(e) {
 function onResize() {
 	$('#chatbox').height($(document).height() - $('#playfield').outerHeight() - $('#the-navbar').outerHeight());
 	$('#chat-input').width($(document).width() - $('#username-field').outerWidth() - 15);
+	$('#chat-contents').height($('#chatbox').height() - $('#chat-input').height() - $('#chat-header').height());
 }
 $(window).resize(onResize);
 
@@ -72,13 +73,16 @@ function sendChatFromInput() {
 		var text = "<b>" + username + ":</b> " + input;
 		sendChat(text);
 		$('#chat-input').val('');
+		contents.scrollTop(contents[0].scrollHeight);
 	}
 }
 $('#send-msg-button').click(sendChatFromInput);
 
 function sendChat(text) {
-	if(text.length > 0)
-		$('#chat-contents').append("<li>" + text + "</li>");
+	if(text.length > 0) {
+		var contents = $('#chat-contents');
+		contents.append("<li>" + text + "</li>");
+	}
 }
 
 function clean(text) {

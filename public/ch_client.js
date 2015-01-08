@@ -23,12 +23,13 @@ $(".cah-card").click(function() {
 	}
 });
 
-$('#chat-input').focusout(function() {
-	var el = $(this);
-	setTimeout(function() {
-		el.focus();
+if(!isMobile())
+	$('#chat-input').focusout(function() {
+		var el = $(this);
+		setTimeout(function() {
+			el.focus();
+		});
 	});
-});
 
 $(document).keypress(function(e) {
     if(e.which == 13)
@@ -36,9 +37,15 @@ $(document).keypress(function(e) {
 });
 
 function onResize() {
-	$('#chatbox').height($(document).height() - $('#playfield').outerHeight() - $('#the-navbar').outerHeight());
-	$('#chat-input').width($(document).width() - $('#username-field').outerWidth() - 15);
-	$('#chat-contents').height($('#chatbox').height() - $('#chat-input').height() - $('#chat-header').height());
+	var docWidth = $(document).width();
+	var docHeight = $(document).height();
+
+	$('#chatbox').height(docHeight - $('#playfield').outerHeight() - $('#the-navbar').outerHeight());
+	$('#chat-input').width(docWidth - $('#username-field').outerWidth() - 15);
+	$('#chat-contents').height($('#chatbox').height() - $('#chat-input').height() - $('#chat-header').height() - 3);
+	$('#chat-messages').width(docWidth - 200);
+	$('#chat-messages').height($('#chat-contents').height());
+	$('#spanel-lobby-interface').css('line-height', $('#chat-contents').height() + "px");
 }
 $(window).resize(onResize);
 
@@ -68,15 +75,15 @@ function setUsernameField() {
 	$('#username-field').text(username);
 }
 
-
 function sendChatFromInput() {
 	var input = clean($('#chat-input').val());
-	var contents = $('#chat-contents');
+	var contents = $('#chat-messages');
 	
 	if(input.length > 0) {
 		var text = "<b>" + username + ":</b> " + input;
 		sendChat(text);
 		$('#chat-input').val('');
+		updateSendButton();
 		contents.scrollTop(contents[0].scrollHeight);
 	}
 }
@@ -84,9 +91,15 @@ $('#send-msg-button').click(sendChatFromInput);
 
 function sendChat(text) {
 	if(text.length > 0) {
-		var contents = $('#chat-contents');
-		contents.append("<li>" + text + "</li>");
+		var contents = $('#chat-messages');
+		contents.append("<li><div class='chat-message-container'>" + text + "</div></li>");
 	}
+}
+
+// Utils
+
+function isMobile() {
+	return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
 function clean(text) {

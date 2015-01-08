@@ -56,14 +56,36 @@
 					You are playing. Pick the <b>1</b> white card you think is funniest to fill in the black one.
 				</div>
 				
-				<div id="chat-contents"></div>
+				<div id="chat-contents">
+					<div id="chat-messages"></div>
+					
+					<div id="chat-side-panel">
+						<div id="spanel-game-interface">
+							<div id="spanel-game-list">
+								<div class="spanel-player" data-nickname="Vazkii"></div>
+								<div class="spanel-player" data-nickname="Dave"></div>
+								<div class="spanel-player" data-nickname="Arowyn"></div>
+								<div class="spanel-player" data-nickname="GoncasPls"></div>
+								<div class="spanel-player" data-nickname="darkforce04"></div>
+							</div>
+							<div id="spanel-player-counter">
+								<b>5</b> Players
+							</div>
+						</div>
+						
+						<div id="spanel-lobby-interface">
+							<span class="vertical-center">You are not<br>
+							in a game</span>
+						</div>
+					</div>
+				</div>
 				
 				<div id="chat-field">
 					<span id="username-field"></span>
 					<input type="text" id="chat-input" autofocus></input>
 				</div>
 			</div>
-			
+		
 			<button class="btn btn-fab btn-raised btn-primary" id="send-msg-button"><i class="mdi-content-send"></i></button>
 		</div>
 		

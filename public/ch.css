@@ -99,17 +99,22 @@
 	border-bottom: 1px #CCCCCC solid;
 }
 
-#chat-contents {
+#chat-messages {
+	display: inline-block;
 	overflow-y: auto;
 	list-style: none;
 }
 
-#chat-contents li { 
+#chat-messages li { 
 	padding-left: 10px;
-	padding-top: 2px; 
+	padding-top: 2px;
 }
 
-#chat-contents li:nth-child(odd) { 
+.chat-message-container {
+	margin-right: 50px;
+}
+
+#chat-messages li:nth-child(odd) { 
 	background-color: #EEEEEE; 
 }
 
@@ -143,7 +148,34 @@
 
 #send-msg-button {
 	position: absolute;
-	bottom: 10px;
-	right: 20px;
+	bottom: 15px;
+	right: 220px;
 	background-color: #F44336;
+}
+
+#chat-side-panel {
+	display: inline-block;
+	vertical-align: top;
+	width: 196px;
+	height: 100%;
+	right: 0;
+	border-left: 1px #CCCCCC solid;
+}
+
+#spanel-game-interface {
+	display: none;	
+}
+
+#spanel-lobby-interface {
+	display: block;
+	height: 100%;
+	text-align: center;
+	font-size: 20px;
+	background-color: #EEEEEE; 
+}
+
+#spanel-lobby-interface .vertical-center {
+	display: inline-block;
+	vertical-align: middle;
+	line-height: normal;  
 }

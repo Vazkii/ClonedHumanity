@@ -1,6 +1,7 @@
 .navbar, .navbar-inverse {
 	background-color: #F44336;
 	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.26);
+	margin-bottom: 0px;
 }
 
 .navbar-brand sub {
@@ -9,7 +10,66 @@
     bottom: -16px;
 }
 
-.page-contents {
-	margin-top: 80px;
-	margin-bottom: 60px;
+#page-contents {
+	margin: 60px 0px 0px 0px;
+	width: 100%;
+	padding-left: 0px;
+	padding-right: 0px;
+	padding-bottom: 0px;
+}
+
+#playfield {
+	padding-top: 20px;
+	padding-bottom: 20px;
+	height: 300px;
+	overflow-y: auto;
+	padding-left: 15px;
+	padding-right: 15px;
+}
+
+.cah-card {
+	display: inline-block;
+	vertical-align: top;
+	width: 150px;
+	height: 150px;
+	background-color: #FFFFFF;
+	margin: 5px 5px 5px 5px;
+	padding: 5px 5px 5px 5px;
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.26);
+}
+
+.cah-card-black {
+	background-color: #222222;
+	color: #FFFFFF;
+}
+
+.card-text {
+	font-size: 17px;
+	height: 125px;
+}
+
+.card-deck {
+	border-top: 1px solid;
+	border-color: #DDDDDD;
+	padding-top: 2px;
+	font-size: 10px;
+	width: 140px;
+	text-align: right;
+}
+
+.cah-card-black .card-deck {
+	border-color: #444444;
+}
+
+.card-pick-radio {
+	margin-left: 128px;
+	margin-top: -165px;
+}
+
+#chatbox {
+    position: fixed;
+    bottom: 60;
+    width: 100%;
+    background-color: #FFFFFF;
+    box-shadow: 0 0px 3px rgba(0, 0, 0, 0.26);
 }

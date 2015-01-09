@@ -1,3 +1,5 @@
 {
-	"port": "843"
+	"port": "843",
+	"max_players": "10",
+	"motd": "This is still in testing phase. Usernames are currently assigned from socket IDs."
 }

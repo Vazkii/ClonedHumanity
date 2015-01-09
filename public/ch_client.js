@@ -1,10 +1,10 @@
-var socket;
+var socket = io();
+var dcd = false;
 
 var username = 'TestUser';
 
 $(function() {
 	$.material.init();
-	socket = io();
 
 	// TODO
 	populateCards();
@@ -14,11 +14,16 @@ $(function() {
 });
 
 $(".cah-card").click(function() {
-	if(!$(this).hasClass('selected-card') && !$(this).hasClass('cah-card-black')) {
-		var checkbox = $(this).find('.card-checkbox');
+	var card = $(this);
+	var parent = card.parent();
+	if(parent.hasClass('card-group'))
+		card = parent.first();
+
+	if(!card.hasClass('selected-card') && !card.hasClass('cah-card-black')) {
+		var checkbox = card.find('.card-checkbox');
 		if(checkbox.css('display') == 'none') {
-			deselectCards();
-			$(this).addClass('selected-card');
+			deselectCards();			
+			card.addClass('selected-card');
 			checkbox.fadeIn(400).css('display', 'inline-block');
 		}
 	}
@@ -63,7 +68,7 @@ function populateCards() {
 }
 
 function findSpaces(str) {
-	return str.replace("_", "<b>___</b>");
+	return str.replace(/_/g, "<b>___</b>");
 }
 
 function populatePlayers() {
@@ -83,25 +88,44 @@ function setUsernameField() {
 }
 
 function sendChatFromInput() {
-	var input = clean($('#chat-input').val());
+	var input = $('#chat-input').val();
 	var contents = $('#chat-messages');
 	
 	if(input.length > 0) {
-		var text = "<b>" + username + ":</b> " + input;
-		sendChat(text);
+		sendChat(input);
 		$('#chat-input').val('');
-		contents.scrollTop(contents[0].scrollHeight);
 	}
 }
 $('#send-msg-button').click(sendChatFromInput);
 
 function sendChat(text) {
-	if(text.length > 0) {
-		var contents = $('#chat-messages');
-		contents.append("<li><div class='chat-message-container'>" + text + "</div></li>");
-	}
+	if(text.length > 0)
+		socket.emit('chat-message', text);
 }
 
 function clean(text) {
 	return $('<b></b>').text(text).html();
+}
+
+socket.on('chat-message', function(msg) {
+	addChatMessage(msg);
+});
+
+socket.on('connect', function() {
+	if(dcd) {
+		addChatMessage('<b class="text-success">You have successfully reconnected to the server.</b>');
+		dcd = false;
+	}
+});
+
+socket.on('disconnect', function() {
+	addChatMessage('<b class="text-danger">You have been disconnected from the server.</b>');	
+	dcd = true;
+});
+
+function addChatMessage(msg) {
+	var contents = $('#chat-messages');
+	
+	contents.append("<li><div class='chat-message-container'>" + msg + "</div></li>");
+	contents.scrollTop(contents[0].scrollHeight);
 }

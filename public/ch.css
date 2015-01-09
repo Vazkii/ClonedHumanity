@@ -79,7 +79,16 @@
 	margin-top: -11px;
 	margin-right: 24px;
 	padding-top: 1px;
+}
 
+.card-group {
+	display: inline-block;
+	vertical-align: top;
+	height: 170px;
+	background-color: #FFFFFF;
+	margin: 5px 5px 5px 5px;
+	padding: 5px 5px 5px 5px;
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.26);
 }
 
 #chatbox {
@@ -121,6 +130,15 @@
 	padding-right: 25px;
 	width: 100px;
 	height: 37px;
+}
+
+#chat-header-timestamp {
+	display: inline-block;
+	vertical-align: middle;
+	margin-top: -7px;
+	line-height: 40px;
+	width: 80px;
+	border-left: 1px #CCCCCC solid;
 }
 
 #chat-messages {
@@ -201,7 +219,11 @@
 }
 
 #spanel-game-interface {
-	//display: none;	
+	//display: none;
+}
+
+#spanel-player-list {
+	overflow-y: auto;
 }
 
 #spanel-player-counter {

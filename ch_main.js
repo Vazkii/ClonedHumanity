@@ -14,7 +14,8 @@ var maxPlayers = config['max_players'];
 var motd = config['motd'];
 
 var io = require('socket.io')(http, {
-	'close timeout': timeout
+	'close timeout': timeout,
+	'heartbeat timeout': timeout
 });
 
 var responses = {

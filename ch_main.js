@@ -64,8 +64,15 @@ var gameserver = new GameServer();
 
 GameServer.prototype.onConnect = function(socket) {
 	console.log('Connection opened by socket with ID ' + socket.id);
+	if(this.playerCount >= maxPlayers) {
+		this.sendMessageToClient(socket, '<b class="text-danger">The server is capped at the maximum amount of players (' + maxPlayers + '). Please try again later.</b>');
+		socket.disconnect();
+		return;
+	}
+	
 	this.players[socket.id] = socket;
 	this.generateProfile(socket);
+	
 	
 	this.playerCount++;
 	this.sendMessageToClient(socket, '<b class="text-info">Welcome to ClonedHumanity.</b> There are <b>' + this.playerCount + '/' + maxPlayers + '</b> players online. | <b>' + 'MOTD:</b> ' + motd);
@@ -74,13 +81,14 @@ GameServer.prototype.onConnect = function(socket) {
 
 GameServer.prototype.onDisconnect = function(socket) {
 	console.log('Connection closed socket with ID ' + socket.id);
-	this.playerCount--;
-	this.sendMessageToAll('<i class="text-muted">' + socket.id + ' has logged out.</i>');
-	
-	delete this.usernameToSocketLookup[this.getUsername(socket.id)];
-	delete this.players[socket.id];
-	delete this.playerProfiles[socket.id];
-	
+	if(socket.id in this.players) {
+		this.playerCount--;
+		this.sendMessageToAll('<i class="text-muted">' + this.getUsername(socket.id) + ' has logged out.</i>');
+		
+		delete this.usernameToSocketLookup[this.getUsername(socket.id)];
+		delete this.players[socket.id];
+		delete this.playerProfiles[socket.id];
+	}
 }
 
 GameServer.prototype.onChatMessage = function(socket, msg) {
@@ -140,7 +148,7 @@ GameServer.prototype.setUsername = function(socket, name) {
 }
 
 GameServer.prototype.getSocketForUsername = function(username) {
-	return usernameToSocketLookup[username];
+	return this.usernameToSocketLookup[username];
 }
 
 GameServer.prototype.sendMessageToAll = function(msg) {
@@ -175,10 +183,11 @@ addCommand('ping', function(socket, args) {
 addCommand('me', function(socket, args) {
 	var action = args.join(' ');
 	if(action.length > 0) {
-		var message = '<i><b>' + gameserver.getUsername(socket.id) + '</b> ' + action + '</i>';
-		if(message.length > maxMessageLength)
+		action = validator.escape(action);
+		var msg = '<i><b>' + gameserver.getUsername(socket.id) + '</b> ' + action + '</i>';		
+		if(msg.length > maxMessageLength)
 			gameserver.sendMessageToClient(socket, '<b class="text-warning">That message is too long. Your messages can\'t be longer than ' + maxMessageLength + ' characters.</b>');
-		else gameserver.sendMessageToAll(message);
+		else gameserver.sendMessageToAll(msg);
 	} else gameserver.sendMessageToClient(socket, '<b class="text-warning">No mesage to send.</b>');
 }, 'Does an action. Usage: <u>/me (action)</u>');
 
@@ -188,8 +197,15 @@ addCommand('nick', function(socket, args) {
 		if(nick.length > maxNickLength) {
 			gameserver.sendMessageToClient(socket, '<b class="text-warning">Your nickname can\'t be longer than ' + maxNickLength + ' characters.</b>');
 			return;
-		} else if(nick.match(/^[a-zA-Z0-9_]+$/) == null) {
+		}
+		
+		if(nick.match(/^[a-zA-Z0-9_]+$/) == null) {
 			gameserver.sendMessageToClient(socket, '<b class="text-warning">Your nickname can only contain alphanumerical characters or underscores.</b>');
+			return;
+		}
+	
+		if(gameserver.getSocketForUsername(nick) != null) {
+			gameserver.sendMessageToClient(socket, '<b class="text-warning">That username is already in use.</b>');
 			return;
 		}
 	
@@ -199,9 +215,21 @@ addCommand('nick', function(socket, args) {
 			gameserver.sendMessageToAll('<i class="text-muted">' + currentNick + ' is now known as ' + nick + '.</i>');
 		} else gameserver.sendMessageToClient(socket, '<b class="text-warning">That nickname is the same as the one you have now.</b>');
 	} else gameserver.sendMessageToClient(socket, '<b class="text-warning">Not enough arguments.</b>');
-	
 }, 'Sets your nickname. Usage: <u>/nick (name)</u>');
 
+addCommand('list', function(socket, args) {
+	var names = Object.keys(gameserver.usernameToSocketLookup);
+	names.sort();
+	gameserver.sendMessageToClient(socket, '<b class="text-info">Players Online (' + gameserver.playerCount + '): </b>' + names.join(', '));
+}, 'Lists the players on the server currently.');
+
+addCommand('listgames', function(socket, args) {
+	gameserver.sendMessageToClient(socket, '<b class="text-warning">Not Implemented Yet!</b>');
+}, 'NYI');
+
+addCommand('startgame', function(socket, args) {
+	gameserver.sendMessageToClient(socket, '<b class="text-warning">Not Implemented Yet!</b>');
+}, 'NYI');
 
 // ============================================= Commands end
 

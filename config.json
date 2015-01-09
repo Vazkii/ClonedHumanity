@@ -1,8 +1,8 @@
 {
 	"port": "843",
 	"timeout": "5",
-	"max_players": "10",
-	"motd": "This is still in testing phase. No game functionality is available, only the chat works. You can change your nickname with <b>/nick</b>. Use <b>/help</b> for help.",
+	"max_players": "50",
+	"motd": "This is still in testing phase. No game functionality is available, only the chat works. You can change your nickname with <b>/nick</b>. Use <b>/help</b> for help. <span class='text-danger'>There is no accounts, anybody can use whichever username they wish, keep that in mind!</span>",
 	"max_nick_length": "16",
 	"max_message_length": "500"
 }

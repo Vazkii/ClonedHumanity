@@ -2,7 +2,6 @@
 var fs = require('fs');
 var app = require('express')();
 var http = require('http').Server(app);
-var io = require('socket.io')(http);
 var util = require('util');
 var validator = require('validator');
 // =============== Modules End
@@ -10,8 +9,13 @@ var validator = require('validator');
 // =============== Main Start
 var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 var port = config['port'];
+var timeout = config['timeout'];
 var maxPlayers = config['max_players'];
 var motd = config['motd'];
+
+var io = require('socket.io')(http, {
+	'close timeout': timeout
+});
 
 var responses = {
 	'/': 'index.html',

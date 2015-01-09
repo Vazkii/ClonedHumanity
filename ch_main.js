@@ -13,6 +13,7 @@ var timeout = config['timeout'];
 var maxPlayers = config['max_players'];
 var motd = config['motd'];
 var maxNickLength = config['max_nick_length'];
+var maxMessageLength = config['max_message_length'];
 
 var io = require('socket.io')(http, {
 	'close timeout': timeout,
@@ -83,7 +84,7 @@ GameServer.prototype.onDisconnect = function(socket) {
 }
 
 GameServer.prototype.onChatMessage = function(socket, msg) {
-	console.log('Message from ' + socket.id + ': ' + msg);
+	console.log('Message from ' + socket.id + ' (' + this.getUsername(socket) + '): ' + msg);
 	msg = msg.trim();
 	
 	if(msg.indexOf('/') == 0) { // Handle command
@@ -94,8 +95,12 @@ GameServer.prototype.onChatMessage = function(socket, msg) {
 			commands[commandName](socket, tokens);
 		} else this.sendMessageToClient(socket, '<b class="text-warning">That command does not exist. Type /help for a list of commands.</b>');
 	} else {
-		msg = validator.escape(msg);
-		this.sendMessageToAll('<b>'  + this.getUsername(socket.id) + ':</b> '  + msg);
+		if(msg.length > maxMessageLength) {
+			this.sendMessageToClient(socket, '<b class="text-warning">That message is too long. Your messages can\'t be longer than ' + maxMessageLength + ' characters.</b>');
+		} else {
+			msg = validator.escape(msg);
+			this.sendMessageToAll('<b>'  + this.getUsername(socket.id) + ':</b> '  + msg);
+		}	
 	}
 }
 
@@ -103,7 +108,6 @@ GameServer.prototype.generateProfile = function(socket) {
 	var profile = { };
 	this.playerProfiles[socket.id] = profile;
 	
-	//var cookieName = socket.handshake.headers['cookie'];
 	this.setUsername(socket, this.generateGuestUsername());
 }
 
@@ -172,7 +176,9 @@ addCommand('me', function(socket, args) {
 	var action = args.join(' ');
 	if(action.length > 0) {
 		var message = '<i><b>' + gameserver.getUsername(socket.id) + '</b> ' + action + '</i>';
-		gameserver.sendMessageToAll(message);
+		if(message.length > maxMessageLength)
+			gameserver.sendMessageToClient(socket, '<b class="text-warning">That message is too long. Your messages can\'t be longer than ' + maxMessageLength + ' characters.</b>');
+		else gameserver.sendMessageToAll(message);
 	} else gameserver.sendMessageToClient(socket, '<b class="text-warning">No mesage to send.</b>');
 }, 'Does an action. Usage: <u>/me (action)</u>');
 

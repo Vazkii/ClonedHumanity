@@ -2,5 +2,6 @@
 	"port": "843",
 	"timeout": "5",
 	"max_players": "10",
-	"motd": "This is still in testing phase. Usernames are currently assigned from socket IDs."
+	"motd": "This is still in testing phase. No game functionality is available, only the chat works. You can change your nickname with <b>/nick</b>. Use <b>/help</b> for help.",
+	"max_nick_length": "16"
 }

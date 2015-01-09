@@ -1,7 +1,7 @@
 var socket = io();
 var dcd = false;
 
-var username = 'TestUser';
+var username = '';
 
 $(function() {
 	$.material.init();
@@ -85,6 +85,7 @@ function populatePlayers() {
 
 function setUsernameField() {
 	$('#username-field').text(username);
+	onResize();
 }
 
 function sendChatFromInput() {
@@ -107,10 +108,6 @@ function clean(text) {
 	return $('<b></b>').text(text).html();
 }
 
-socket.on('chat-message', function(msg) {
-	addChatMessage(msg);
-});
-
 socket.on('connect', function() {
 	if(dcd) {
 		addChatMessage('<b class="text-success">You have successfully reconnected to the server.</b>');
@@ -121,6 +118,15 @@ socket.on('connect', function() {
 socket.on('disconnect', function() {
 	addChatMessage('<b class="text-danger">You have been disconnected from the server.</b>');	
 	dcd = true;
+});
+
+socket.on('chat-message', function(msg) {
+	addChatMessage(msg);
+});
+
+socket.on('set-username', function(user) {
+	username = user;
+	setUsernameField();
 });
 
 function addChatMessage(msg) {

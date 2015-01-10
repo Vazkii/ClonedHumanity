@@ -49,7 +49,6 @@ io.on('connection', function(socket) {
 		gameserver.onDisconnect(socket);
 	});
 	
-	// TODO IMPORTANT - Sanitize mesasge, no xss here.
 	socket.on('chat-message', function(msg) {
 		gameserver.onChatMessage(socket, msg);
 	});

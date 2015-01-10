@@ -116,7 +116,8 @@ socket.on('connect', function() {
 });
 
 socket.on('disconnect', function() {
-	addChatMessage('<b class="text-danger">You have been disconnected from the server.</b>');	
+	addChatMessage('<b class="text-danger">You have been disconnected from the server.</b>');
+	setHintMessage('<b class="text-danger">You are not connected to the server.</b>');	
 	dcd = true;
 });
 
@@ -129,9 +130,17 @@ socket.on('set-username', function(user) {
 	setUsernameField();
 });
 
+socket.on('hint-message', function(msg) {
+	setHintMessage(msg);
+});
+
 function addChatMessage(msg) {
 	var contents = $('#chat-messages');
 	
 	contents.append("<li><div class='chat-message-container'>" + msg + "</div></li>");
 	contents.scrollTop(contents[0].scrollHeight);
+}
+
+function setHintMessage(msg) {
+	$('#chat-header-hint').html(msg);
 }

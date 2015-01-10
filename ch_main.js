@@ -14,6 +14,7 @@ var maxPlayers = config['max_players'];
 var motd = config['motd'];
 var maxNickLength = config['max_nick_length'];
 var maxMessageLength = config['max_message_length'];
+var gameRoundTime = config['game_round_time'];
 
 var io = require('socket.io')(http, {
 	'close timeout': timeout,
@@ -59,7 +60,7 @@ var GameServer = function() {
 	this.playerProfiles = {};
 	this.usernameToSocketLookup = {};
 	this.playerCount = 0;
-};
+}
 var gameserver = new GameServer();
 
 GameServer.prototype.onConnect = function(socket) {
@@ -76,6 +77,7 @@ GameServer.prototype.onConnect = function(socket) {
 	
 	this.playerCount++;
 	this.sendMessageToClient(socket, '<b class="text-info">Welcome to ClonedHumanity.</b> There are <b>' + this.playerCount + '/' + maxPlayers + '</b> players online. | <b>' + 'MOTD:</b> ' + motd);
+	this.setHintMessage(socket, 'You are not in a game. Type <b>/listgames</b> to check out public games or <b>/startgame</b> to make one! If you need help try <b>/help</b>.');
 	this.sendMessageToAll('<i class="text-muted">' + this.getUsername(socket.id) + ' has logged in.</i>');
 }
 
@@ -103,9 +105,9 @@ GameServer.prototype.onChatMessage = function(socket, msg) {
 			commands[commandName](socket, tokens);
 		} else this.sendMessageToClient(socket, '<b class="text-warning">That command does not exist. Type /help for a list of commands.</b>');
 	} else {
-		if(msg.length > maxMessageLength) {
+		if(msg.length > maxMessageLength)
 			this.sendMessageToClient(socket, '<b class="text-warning">That message is too long. Your messages can\'t be longer than ' + maxMessageLength + ' characters.</b>');
-		} else {
+		else if(msg.length > 0) {
 			msg = validator.escape(msg);
 			this.sendMessageToAll('<b>'  + this.getUsername(socket.id) + ':</b> '  + msg);
 		}	
@@ -117,6 +119,7 @@ GameServer.prototype.generateProfile = function(socket) {
 	this.playerProfiles[socket.id] = profile;
 	
 	this.setUsername(socket, this.generateGuestUsername());
+	this.setPlayerGame(socket, null);
 }
 
 GameServer.prototype.generateGuestUsername = function() {
@@ -158,7 +161,33 @@ GameServer.prototype.sendMessageToAll = function(msg) {
 GameServer.prototype.sendMessageToClient = function(socket, msg) {
 	socket.emit('chat-message', msg);
 }
+
+GameServer.prototype.setHintMessage = function(socket, msg) {
+	socket.emit('hint-message', msg);
+}
+
+GameServer.prototype.setPlayerGame = function(socket, game) {
+	this.playerProfiles[this.getSocketId(socket)].game = game;
+}
 // ============================================= GameServer end
+
+// ============================================= Game begin
+var Game = function(host) {
+	this.players = { };
+	this.roundTime = gameRoundTime;
+	this.host = host;
+	players[host.id] = host;
+}
+
+Game.prototype.getPlayerAwesomePoints = function(socket) {
+	return gameserver.playerProfiles[this.getSocketId(socket)].points;
+}
+
+Game.prototype.setPlayerAwesomePoints = function(socket, points) {
+	gameserver.playerProfiles[this.getSocketId(socket)].points = points;
+}
+
+// ============================================= Game end
 
 // ============================================= Commands begin
 var commands = { };

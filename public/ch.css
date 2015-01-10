@@ -4,7 +4,17 @@
 	margin-bottom: 0px;
 }
 
-.navbar-brand sub {
+.navbar-brand {
+	padding-top: 5px;
+}
+
+.sup {
+	vertical-align: super;
+	font-size: 12px;
+}
+
+.sub {
+	position: relative;
     margin-left: -150px;
     font-size: 10px;
     bottom: -16px;

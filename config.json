@@ -7,5 +7,6 @@
 	"max_nick_length": "16",
 	"max_message_length": "500",
 	"max_game_name_length": "20",
-	"game_round_time": "30"
+	"game_round_time": "30",
+	"allow_global_chat": "false"
 }

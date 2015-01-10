@@ -237,6 +237,14 @@
 	display: none;
 }
 
+#spanel-game-name {
+	height: 20px;
+	line-height: 20px;
+	text-align: center;
+	background-color: #DDDDDD; 
+	border-bottom: 1px #CCCCCC solid;
+}
+
 #spanel-player-list {
 	overflow-y: auto;
 }

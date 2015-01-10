@@ -17,6 +17,7 @@ var maxNickLength = config['max_nick_length'];
 var maxMessageLength = config['max_message_length'];
 var maxGameNameLength = config['max_game_name_length'];
 var gameRoundTime = config['game_round_time'];
+var allowGlobalChat = config['allow_global_chat'] == 'true';
 
 var io = require('socket.io')(http, {
 	'close timeout': timeout,
@@ -89,6 +90,10 @@ GameServer.prototype.onDisconnect = function(socket) {
 		this.playerCount--;
 		this.sendMessageToAll('<i class="text-muted">' + this.getUsername(socket.id) + ' has logged out.</i>');
 		
+		var game = this.getGamePlayerIsIn(socket);
+		if(game != null)
+			game.leaveGame(socket);
+		
 		delete this.usernameToSocketLookup[this.getUsername(socket.id)];
 		delete this.players[socket.id];
 		delete this.playerProfiles[socket.id];
@@ -111,8 +116,14 @@ GameServer.prototype.onChatMessage = function(socket, msg) {
 			this.sendMessageToClient(socket, '<b class="text-warning">That message is too long. Your messages can\'t be longer than ' + maxMessageLength + ' characters.</b>');
 		else if(msg.length > 0) {
 			msg = validator.escape(msg);
-			this.sendMessageToAll('<b>'  + this.getUsername(socket.id) + ':</b> '  + msg);
-		}	
+			var sendmsg = '<b>' + this.getUsername(socket.id) + ':</b> '  + msg;
+			var game = this.getGamePlayerIsIn(socket);
+			if(game == null) {
+				 if(!allowGlobalChat)
+				 	this.sendMessageToClient(socket, '<b class="text-warning">Global chat is disabled, you must join a game if you want to chat.</b>');
+				else this.sendMessageToAll(sendmsg);
+			} else game.sendChatMessageToAll(sendmsg);
+		}
 	}
 }
 

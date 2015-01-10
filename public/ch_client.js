@@ -44,7 +44,7 @@ function onResize() {
 	$('#chat-messages').width(docWidth - 200);
 	$('#chat-messages').height($('#chat-contents').height());
 	$('#spanel-lobby-interface').css('line-height', $('#chat-contents').height() + "px");
-	$('#spanel-player-list').height($('#chat-contents').height() - 20);
+	$('#spanel-player-list').height($('#chat-contents').height() - $('#spanel-player-counter').height() - $('#spanel-game-name').height());
 	$('#chat-header-hint').width(docWidth - 217);
 }
 $(window).resize(onResize);
@@ -144,8 +144,9 @@ socket.on('game-state', function(data) {
 		html += '</div>';
 
 		var set = function() {
+			$('#spanel-game-name').html(data.name);
 			$('#spanel-player-list').html(html);
-			$('#spanel-player-counter').html(data.name + ' | <b>' + playerCount + '</b> players');
+			$('#spanel-player-counter').html('<b>' + playerCount + '</b> players');
 		};
 		
 		if($('#spanel-game-interface').css('display') == 'none')

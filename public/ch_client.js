@@ -71,18 +71,6 @@ function findSpaces(str) {
 	return str.replace(/_/g, "<b>___</b>");
 }
 
-function populatePlayers() {
-	var players = 0;
-
-	$('.spanel-player-info').each(function(e) {
-		var html = "<div class='spanel-player-name'>" + $(this).attr('data-nickname') + "</div><div class='spanel-player-score'><b>" + $(this).attr('data-points') + "</b> points</div>";
-		$(this).html(html);
-		players++;
-	});
-	
-	$('#spanel-player-counter').html('<b>' + players + '</b> players');
-}
-
 function setUsernameField() {
 	$('#username-field').text(username);
 	onResize();
@@ -117,7 +105,8 @@ socket.on('connect', function() {
 
 socket.on('disconnect', function() {
 	addChatMessage('<b class="text-danger">You have been disconnected from the server.</b>');
-	setHintMessage('<b class="text-danger">You are not connected to the server.</b>');	
+	setHintMessage('<b class="text-danger">You are not connected to the server.</b>');
+	setNotInGame();
 	dcd = true;
 });
 
@@ -133,6 +122,47 @@ socket.on('set-username', function(user) {
 socket.on('hint-message', function(msg) {
 	setHintMessage(msg);
 });
+
+socket.on('game-state', function(data) {
+	if('nogame' in data)
+		setNotInGame();
+	else {
+		var players = data.players;
+		var playerCount = 0;
+		var html = '';
+		for(name in players) {
+			var player = players[name];
+
+			var displayName = name;
+			if(player.host)
+				displayName += ('<i> (host)</i>');
+				
+			html += '<div class="spanel-player-info"><div class="spanel-player-name">' + displayName + '</div><div class"spanel-player-score"><b>' + player.points + '</b> points</div></div>';
+			playerCount++;
+		}
+		
+		html += '</div>';
+
+		var set = function() {
+			$('#spanel-player-list').html(html);
+			$('#spanel-player-counter').html(data.name + ' | <b>' + playerCount + '</b> players');
+		};
+		
+		if($('#spanel-game-interface').css('display') == 'none')
+			$('#spanel-lobby-interface').fadeOut(function() {
+				set();
+				$('#spanel-game-interface').fadeIn();
+			});
+		else set();
+	}
+});
+
+function setNotInGame() {
+	if($('#spanel-lobby-interface').css('display') == 'none')
+		$('#spanel-game-interface').fadeOut(function() {			
+			$('#spanel-lobby-interface').fadeIn();
+		});
+}
 
 function addChatMessage(msg) {
 	var contents = $('#chat-messages');

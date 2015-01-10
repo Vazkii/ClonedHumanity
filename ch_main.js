@@ -11,9 +11,11 @@ var config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 var port = config['port'];
 var timeout = config['timeout'];
 var maxPlayers = config['max_players'];
+var minGamePlayers = config['min_game_players'];
 var motd = config['motd'];
 var maxNickLength = config['max_nick_length'];
 var maxMessageLength = config['max_message_length'];
+var maxGameNameLength = config['max_game_name_length'];
 var gameRoundTime = config['game_round_time'];
 
 var io = require('socket.io')(http, {
@@ -55,11 +57,12 @@ io.on('connection', function(socket) {
 
 // ============================================= GameServer begin
 var GameServer = function() {
-	this.games = [];
+	this.games = {};
 	this.players = {};
 	this.playerProfiles = {};
 	this.usernameToSocketLookup = {};
 	this.playerCount = 0;
+	this.gameCount = 0;
 }
 var gameserver = new GameServer();
 
@@ -73,7 +76,6 @@ GameServer.prototype.onConnect = function(socket) {
 	
 	this.players[socket.id] = socket;
 	this.generateProfile(socket);
-	
 	
 	this.playerCount++;
 	this.sendMessageToClient(socket, '<b class="text-info">Welcome to ClonedHumanity.</b> There are <b>' + this.playerCount + '/' + maxPlayers + '</b> players online. | <b>' + 'MOTD:</b> ' + motd);
@@ -147,6 +149,10 @@ GameServer.prototype.setUsername = function(socket, name) {
 		delete this.usernameToSocketLookup[oldName];
 		this.usernameToSocketLookup[name] = socket;
 		socket.emit('set-username', name);
+		
+		var game = this.getGamePlayerIsIn(socket);
+		if(game != null)
+			game.syncState();
 	}
 }
 
@@ -166,25 +172,133 @@ GameServer.prototype.setHintMessage = function(socket, msg) {
 	socket.emit('hint-message', msg);
 }
 
+GameServer.prototype.addGame = function(socket, maxPlayers, name) {
+	var game = new Game(socket, maxPlayers, name);
+	this.games[name] = game;
+	this.gameCount++;
+}
+
+GameServer.prototype.getGameForName = function(name) {
+	return this.games[name];
+}
+
+GameServer.prototype.getGame = function(game) {
+	typeof game == 'string' ? games[game] : game;
+}
+
+GameServer.prototype.disbandGame = function(game) {
+	//game = this.getGame(game);
+	for(player in game.players)
+		this.setPlayerGame(game.players[player], null);
+	this.gameCount--;
+	this.sendMessageToAll('<i class="text-info">The game "' + game.name + '" has been disbanded.</i>');
+	
+	delete this.games[game.name];
+}
+
+GameServer.prototype.getGamePlayerIsIn = function(socket) {
+	return this.playerProfiles[this.getSocketId(socket)].game;
+}
+
 GameServer.prototype.setPlayerGame = function(socket, game) {
 	this.playerProfiles[this.getSocketId(socket)].game = game;
+	if(game == null)
+		socket.emit('game-state', { nogame: true });
 }
 // ============================================= GameServer end
 
 // ============================================= Game begin
-var Game = function(host) {
+var Game = function(host, maxPlayers, name) {
+	this.name = name;
 	this.players = { };
 	this.roundTime = gameRoundTime;
 	this.host = host;
-	players[host.id] = host;
+	this.maxPlayers = maxPlayers;
+	this.playerCount = 0;
+	this.playing = false;
+	
+	this.joinGame(host);
 }
 
 Game.prototype.getPlayerAwesomePoints = function(socket) {
-	return gameserver.playerProfiles[this.getSocketId(socket)].points;
+	return gameserver.playerProfiles[gameserver.getSocketId(socket)].points;
 }
 
 Game.prototype.setPlayerAwesomePoints = function(socket, points) {
-	gameserver.playerProfiles[this.getSocketId(socket)].points = points;
+	gameserver.playerProfiles[gameserver.getSocketId(socket)].points = points;
+}
+
+Game.prototype.tryJoinGame = function(socket) {
+	if(this.playerCount >= this.maxPlayers)
+		gameserver.sendMessage(socket, '<b class="text-warning">This game is full.</b>');
+	else if(this.playing) 
+		gameserver.sendMessage(socket, '<b class="text-warning">This game is in progress, you can\'t join a game that\'s already in progress.</b>');
+	else this.joinGame(socket);
+}
+
+Game.prototype.joinGame = function(socket) {
+	this.players[socket.id] = socket;
+	gameserver.setPlayerGame(socket, this);
+	this.setPlayerAwesomePoints(socket, 0);
+	this.playerCount++;
+	this.sendChatMessageToAll('<i>' + gameserver.getUsername(socket.id) + ' joined the game.</i>');
+	if(socket == this.host)
+		gameserver.setHintMessage(socket, 'You are the game\'s host. When you want to start the game type <b>/start</b>.');
+	else gameserver.setHintMessage(socket, 'You are in a game, the game will start once the host decides. Feel free to chat until then!');
+	this.syncState();
+}
+
+Game.prototype.leaveGame = function(socket) {
+	var sync = false;
+	gameserver.setPlayerGame(socket, null);
+	this.playerCount--;
+	
+	if(this.host == socket || this.playerCount < (this.playing ? minGamePlayers : 1))
+		gameserver.disbandGame(this);
+	else {
+		this.sendChatMessageToAll('<i>' + gameserver.getUsername(socket.id) + ' left the game.</i>');
+		sync = true;
+	}
+	
+	delete this.players[socket.id];
+	if(sync)
+		this.syncState();
+}
+
+Game.prototype.syncState = function() {
+	var data = {};
+	var players = {};
+	for(name in this.players) {
+		var info = {};
+		var username = gameserver.getUsername(name);
+		info.name = username;
+		info.points = this.getPlayerAwesomePoints(name);
+		info.role = 'player'; // TODO
+		info.host = (this.host == this.players[name]);
+		players[username] = info;
+	}
+	
+	data.players = players;
+	data.name = this.name;
+	
+	this.sendToAll('game-state', data);
+}
+
+Game.prototype.sendChatMessageToAll = function(message) {
+	this.sendToAll('chat-message', message);
+}
+
+Game.prototype.sendToAll = function(packetName, data) {
+	for(name in this.players)
+		this.players[name].emit(packetName, data);
+}
+
+Game.prototype.getListString = function() {
+	return '<b class="' + (this.playing ? 'text-danger' : 'text-success') + '">' + this.name + '</b> (' + this.playerCount + '/' + this.maxPlayers + ')';
+}
+
+Game.prototype.tick = function() {
+	
 }
 
 // ============================================= Game end
@@ -198,6 +312,7 @@ function addCommand(name, func, desc) {
 	commandInfo[name] = desc;
 }
 
+// /help command
 addCommand('help', function(socket, args) {
 	var message = '<b class="text-info">ClonedHumanity command lookup:</b><br>';
 	for(name in commandInfo)
@@ -205,10 +320,12 @@ addCommand('help', function(socket, args) {
 	gameserver.sendMessageToClient(socket, message);
 }, 'Gets info about all the registered commands.');
 
+// /ping command
 addCommand('ping', function(socket, args) {
 	gameserver.sendMessageToClient(socket, '<b class="text-success">Pong!</b>');
 }, 'Pings the server.');
 
+// /me command
 addCommand('me', function(socket, args) {
 	var action = args.join(' ');
 	if(action.length > 0) {
@@ -220,6 +337,7 @@ addCommand('me', function(socket, args) {
 	} else gameserver.sendMessageToClient(socket, '<b class="text-warning">No mesage to send.</b>');
 }, 'Does an action. Usage: <u>/me (action)</u>');
 
+// /nick command
 addCommand('nick', function(socket, args) {
 	if(args.length > 0) {
 		var nick = args.join(' ').trim();
@@ -246,19 +364,83 @@ addCommand('nick', function(socket, args) {
 	} else gameserver.sendMessageToClient(socket, '<b class="text-warning">Not enough arguments.</b>');
 }, 'Sets your nickname. Usage: <u>/nick (name)</u>');
 
+// /list command
 addCommand('list', function(socket, args) {
 	var names = Object.keys(gameserver.usernameToSocketLookup);
 	names.sort();
 	gameserver.sendMessageToClient(socket, '<b class="text-info">Players Online (' + gameserver.playerCount + '): </b>' + names.join(', '));
 }, 'Lists the players on the server currently.');
 
+// /listgames command
 addCommand('listgames', function(socket, args) {
-	gameserver.sendMessageToClient(socket, '<b class="text-warning">Not Implemented Yet!</b>');
+	var names = [];
+	for(game in gameserver.games)
+		names.push(gameserver.games[game].getListString());
+	names.sort();
+	gameserver.sendMessageToClient(socket, '<b class="text-info">Public Games (' + gameserver.gameCount + '): </b>' + names.join(', '));
+
 }, 'NYI');
 
+// /startgame command
 addCommand('startgame', function(socket, args) {
-	gameserver.sendMessageToClient(socket, '<b class="text-warning">Not Implemented Yet!</b>');
-}, 'NYI');
+	if(gameserver.getGamePlayerIsIn(socket) != null) {
+		gameserver.sendMessageToClient(socket, '<b class="text-warning">You are already in a game.</b>');
+		return;
+	}
+
+	if(args.length < 2) {
+		gameserver.sendMessageToClient(socket, '<b class="text-warning">Not enough arguments. Proper Usage: <span class="text-info">/startgame (max-players) (name)</span></b>');
+		return;
+	}
+	
+	var players = parseInt(args[0]);
+	if(isNaN(players) || players < minGamePlayers) {
+		gameserver.sendMessageToClient(socket, '<b class="text-warning">The amount of max players is invalid or is below ' + minGamePlayers + ', can\'t create game.</b>');
+		return;
+	}
+	
+	var name = args.splice(1).join(' ').trim();
+	
+	if(name.length > maxGameNameLength) {
+		gameserver.sendMessageToClient(socket, '<b class="text-warning">Your game\'s name can\'t be longer than ' + maxGameNameLength + ' characters.</b>');
+		return;
+	}
+	
+	if(name.match(/^[a-zA-Z0-9_]+$/) == null) {
+		gameserver.sendMessageToClient(socket, '<b class="text-warning">Your game\'s name can only contain alphanumerical characters or underscores.</b>');
+		return;
+	}
+
+	if(gameserver.getGameForName(name) != null) {
+		gameserver.sendMessageToClient(socket, '<b class="text-warning">That game name is already in use.</b>');
+		return;
+	}
+	
+	gameserver.addGame(socket, players, name);
+	gameserver.sendMessageToClient(socket, '<b class="text-success">Successfully created the game "' + name + '"</b>');
+	gameserver.sendMessageToAll('<i class="text-info">' + gameserver.getUsername(socket.id) + ' has created the game "' + name + '"</i>');
+}, 'Creates a new game.  Usage: <u>/startgame (max-players) (name)</u>');
+
+// /joingame command
+addCommand('joingame', function(socket, args) {
+	if(args.length < 1) {
+		gameserver.sendMessageToClient(socket, '<b class="text-warning">Not enough arguments. Proper Usage: <span class="text-info">/joingame (name)</span></b>');
+		return;
+	}
+	
+	var name = args.join(' ');
+	var game = gameserver.getGameForName(name);
+	game.tryJoinGame(socket);
+}, 'Joins a game. Usage: <u>/joingame (name)</u>');
+
+// /leavegame command
+addCommand('leavegame', function(socket, args) {
+	var game = gameserver.getGamePlayerIsIn(socket);
+	if(game != null)
+		game.leaveGame(socket);
+	else gameserver.sendMessageToClient(socket, '<b class="text-warning">You are not in a game.</b>');
+}, 'Leaves your current game. If you\'re the host the game is disbanded.');
+
 
 // ============================================= Commands end
 

@@ -17,6 +17,7 @@ var maxNickLength = config['max_nick_length'];
 var maxMessageLength = config['max_message_length'];
 var maxGameNameLength = config['max_game_name_length'];
 var gameRoundTime = config['game_round_time'];
+var intervalTime = config['inteval_time'];
 var allowGlobalChat = config['allow_global_chat'] == 'true';
 
 var io = require('socket.io')(http, {
@@ -247,16 +248,9 @@ var Game = function(host, maxPlayers, name, locked) {
 	this.playerCount = 0;
 	this.playing = false;
 	this.password = locked ? gameserver.makeGamePassword(8) : '';
+	this.deck = new Deck();
 	
 	this.joinGame(host);
-}
-
-Game.prototype.getPlayerAwesomePoints = function(socket) {
-	return gameserver.playerProfiles[gameserver.getSocketId(socket)].points;
-}
-
-Game.prototype.setPlayerAwesomePoints = function(socket, points) {
-	gameserver.playerProfiles[gameserver.getSocketId(socket)].points = points;
 }
 
 Game.prototype.tryJoinGame = function(socket, pass) {
@@ -275,7 +269,7 @@ Game.prototype.joinGame = function(socket) {
 	this.setPlayerAwesomePoints(socket, 0);
 	this.playerCount++;
 	this.sendChatMessageToAll('<i>' + gameserver.getUsername(socket.id) + ' joined the game.</i>');
-	if(socket == this.host)
+	if(this.isHost(socket))
 		gameserver.setHintMessage(socket, 'You are the game\'s host. When you want to start the game type <b>/start</b>.' + (this.locked ? (' <i>This game\'s password is ' + this.password + '.</i>') : ''));
 	else gameserver.setHintMessage(socket, 'You are in a game, the game will start once the host decides. Feel free to chat until then!');
 	this.syncState();
@@ -286,7 +280,7 @@ Game.prototype.leaveGame = function(socket) {
 	gameserver.setPlayerGame(socket, null);
 	this.playerCount--;
 	
-	if(this.host == socket || this.playerCount < (this.playing ? minGamePlayers : 1))
+	if(this.isHost(socket) || this.playerCount < (this.playing ? minGamePlayers : 1))
 		gameserver.disbandGame(this);
 	else {
 		this.sendChatMessageToAll('<i>' + gameserver.getUsername(socket.id) + ' left the game.</i>');
@@ -307,7 +301,7 @@ Game.prototype.syncState = function() {
 		info.name = username;
 		info.points = this.getPlayerAwesomePoints(name);
 		info.role = 'player'; // TODO
-		info.host = (this.host == this.players[name]);
+		info.host = this.isHost(this.players[name]);
 		players[username] = info;
 	}
 	
@@ -326,15 +320,92 @@ Game.prototype.sendToAll = function(packetName, data) {
 		this.players[name].emit(packetName, data);
 }
 
+Game.prototype.isHost = function(socket) {
+	return socket == this.host;
+}
+
 Game.prototype.getListString = function() {
 	return '<b class="' + (this.playing ? 'text-danger' : 'text-success') + '">' + this.name + '</b> (' + this.playerCount + '/' + this.maxPlayers + ')';
 }
 
+Game.prototype.addCardcast = function(socket, id) {
+	if(this.isHost(socket)) {
+		var deckName = this.deck.addCardcast(id);
+		if(deckName != undefined)
+			gameserver.sendMessageToClient(socket, '<b class="text-success">Successfuly added ' + deckName + ' to the list of decks playing.</b>');
+		else gameserver.sendMessageToClient(socket, '<b class="text-warning">Couldn\'t add the deck. It was either already there or something went wrong internally.</b>');
+	} else gameserver.sendMessageToClient(socket, '<b class="text-warning">You are not this game\'s host.</b>');
+}
+
+// Game logic
 Game.prototype.tick = function() {
 	
 }
 
+Game.prototype.getPlayerAwesomePoints = function(socket) {
+	return gameserver.playerProfiles[gameserver.getSocketId(socket)].points;
+}
+
+Game.prototype.setPlayerAwesomePoints = function(socket, points) {
+	gameserver.playerProfiles[gameserver.getSocketId(socket)].points = points;
+}
+
+
+Game.prototype.playCard = function(socket, card) {
+	var cards = [ card ];
+	this.playCards(socket, cards, false);
+}
+
+Game.prototype.playCards = function(socket, cards, override) {
+	socket.emit('play-cards', cards);
+}
+
 // ============================================= Game end
+
+// ============================================= Deck begin
+var Deck = function() {
+	this.calls = { };
+	this.responses = { };
+	this.decksAdded = [ ];
+}
+
+Deck.prototype.addCardcast = function(ccId) {
+	var deckId = 'cc_' + ccId;
+	if(deckId in this.decksAdded)
+		return undefined;
+	
+	var ccHost = 'https://api.cardcastgame.com';
+	var deckPath = '/v1/decks/' + ccId;
+	var callsPath = deckPath + '/calls';
+	var responsesPath = deckPath + '/responses';
+	var deckName = undefined;
+	
+	http.call({ host: ccHost, path: deckPath }, function(resp) {
+		deckName = resp.name;
+		http.call({ host: ccHost, path: callsPath }, loadCardCastJson(deckName, calls, true)).end();
+		http.call({ host: ccHost, path: responsesPath }, loadCardCastJson(deckName, responses, false)).end();
+	});
+	
+	this.decksAdded.push(deckId);
+	return deckName;
+}
+
+Deck.prototype.loadCardCastJson = function(deckname, obj, blackCard) {
+	return function(json) {
+		var cardsArr = JSON.parseJSON(json);
+		for(i in cardsArr) {
+			var cardObj = cardsArr[i];
+			var card = { 
+				text: cardObj.text,
+				deck: deckname,
+				black: blackCard
+			};
+			obj[cardObj.id] = card;
+		}
+	};
+}
+
+// ============================================= Deck end
 
 // ============================================= Commands begin
 var commands = { };
@@ -494,6 +565,21 @@ addCommand('leavegame', function(socket, args) {
 	else gameserver.sendMessageToClient(socket, '<b class="text-warning">You are not in a game.</b>');
 }, 'Leaves your current game. If you\'re the host the game is disbanded.');
 
+// invite command
+// todo
+
+// addcc command
+addCommand('addcc', function(socket, args) {
+	if(args.length < 1) {
+		gameserver.sendMessageToClient(socket, '<b class="text-warning">Not enough arguments. Proper Usage: <span class="text-info">/addcc (id)</span></b>');
+		return;
+	}
+	
+	var game = gameserver.getGamePlayerIsIn(socket);
+	if(game != null)
+		game.addCardcast(socket, args[0]);
+	else gameserver.sendMessageToClient(socket, '<b class="text-warning">You are not in a game.</b>');
+}, 'Adds a deck from CardCast given the ID of that deck. Usage: <u>/addcc (id)</u>');
 
 // ============================================= Commands end
 

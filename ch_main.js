@@ -79,7 +79,7 @@ GameServer.prototype.onConnect = function(socket) {
 	
 	this.playerCount++;
 	this.sendMessageToClient(socket, '<b class="text-info">Welcome to ClonedHumanity.</b> There are <b>' + this.playerCount + '/' + maxPlayers + '</b> players online. | <b>' + 'MOTD:</b> ' + motd);
-	this.setHintMessage(socket, 'You are not in a game. Type <b>/listgames</b> to check out public games or <b>/startgame</b> to make one! If you need help try <b>/help</b>.');
+	this.setDefaultHintMessage(socket);
 	this.sendMessageToAll('<i class="text-muted">' + this.getUsername(socket.id) + ' has logged in.</i>');
 }
 
@@ -182,8 +182,12 @@ GameServer.prototype.setHintMessage = function(socket, msg) {
 	socket.emit('hint-message', msg);
 }
 
-GameServer.prototype.addGame = function(socket, maxPlayers, name) {
-	var game = new Game(socket, maxPlayers, name);
+GameServer.prototype.setDefaultHintMessage = function(socket) {
+	this.setHintMessage(socket, 'You are not in a game. Type <b>/listgames</b> to check out public games or <b>/startgame</b> to make one! If you need help try <b>/help</b>.');
+}
+
+GameServer.prototype.addGame = function(socket, maxPlayers, name, locked) {
+	var game = new Game(socket, maxPlayers, name, locked);
 	this.games[name] = game;
 	this.gameCount++;
 }
@@ -201,7 +205,11 @@ GameServer.prototype.disbandGame = function(game) {
 	for(player in game.players)
 		this.setPlayerGame(game.players[player], null);
 	this.gameCount--;
-	this.sendMessageToAll('<i class="text-info">The game "' + game.name + '" has been disbanded.</i>');
+	
+	var msg = '<i class="text-info">The game "' + game.name + '" has been disbanded.</i>';
+	if(this.locked)
+		game.sendChatMessageToAll(msg);
+	else this.sendMessageToAll(msg);
 	
 	delete this.games[game.name];
 }
@@ -212,20 +220,33 @@ GameServer.prototype.getGamePlayerIsIn = function(socket) {
 
 GameServer.prototype.setPlayerGame = function(socket, game) {
 	this.playerProfiles[this.getSocketId(socket)].game = game;
-	if(game == null)
+	if(game == null) {
 		socket.emit('game-state', { nogame: true });
+		this.setDefaultHintMessage(socket);
+	}
+}
+
+GameServer.prototype.makeGamePassword = function(length) {
+	var validChars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+	var pass = '';
+	for(var i = 0; i < length; i++)
+		pass += validChars.charAt(getRandomArbitrary(0, validChars.length));
+	
+	return pass;
 }
 // ============================================= GameServer end
 
 // ============================================= Game begin
-var Game = function(host, maxPlayers, name) {
+var Game = function(host, maxPlayers, name, locked) {
 	this.name = name;
 	this.players = { };
 	this.roundTime = gameRoundTime;
 	this.host = host;
 	this.maxPlayers = maxPlayers;
+	this.locked = locked;
 	this.playerCount = 0;
 	this.playing = false;
+	this.password = locked ? gameserver.makeGamePassword(8) : '';
 	
 	this.joinGame(host);
 }
@@ -238,11 +259,13 @@ Game.prototype.setPlayerAwesomePoints = function(socket, points) {
 	gameserver.playerProfiles[gameserver.getSocketId(socket)].points = points;
 }
 
-Game.prototype.tryJoinGame = function(socket) {
+Game.prototype.tryJoinGame = function(socket, pass) {
 	if(this.playerCount >= this.maxPlayers)
-		gameserver.sendMessage(socket, '<b class="text-warning">This game is full.</b>');
+		gameserver.sendMessageToClient(socket, '<b class="text-warning">This game is full.</b>');
 	else if(this.playing) 
-		gameserver.sendMessage(socket, '<b class="text-warning">This game is in progress, you can\'t join a game that\'s already in progress.</b>');
+		gameserver.sendMessageToClient(socket, '<b class="text-warning">This game is in progress, you can\'t join a game that\'s already in progress.</b>');
+	else if(this.locked && this.password != pass)
+		gameserver.sendMessageToClient(socket, '<b class="text-warning">This game is private, the password is either missing or invalid.</b>');
 	else this.joinGame(socket);
 }
 
@@ -253,7 +276,7 @@ Game.prototype.joinGame = function(socket) {
 	this.playerCount++;
 	this.sendChatMessageToAll('<i>' + gameserver.getUsername(socket.id) + ' joined the game.</i>');
 	if(socket == this.host)
-		gameserver.setHintMessage(socket, 'You are the game\'s host. When you want to start the game type <b>/start</b>.');
+		gameserver.setHintMessage(socket, 'You are the game\'s host. When you want to start the game type <b>/start</b>.' + (this.locked ? (' <i>This game\'s password is ' + this.password + '.</i>') : ''));
 	else gameserver.setHintMessage(socket, 'You are in a game, the game will start once the host decides. Feel free to chat until then!');
 	this.syncState();
 }
@@ -384,52 +407,63 @@ addCommand('list', function(socket, args) {
 // /listgames command
 addCommand('listgames', function(socket, args) {
 	var names = [];
+	var games = 0;
 	for(game in gameserver.games)
-		names.push(gameserver.games[game].getListString());
+		if(!gameserver.games[game].locked) {
+			names.push(gameserver.games[game].getListString());
+			games++;
+		}
+			
 	names.sort();
-	gameserver.sendMessageToClient(socket, '<b class="text-info">Public Games (' + gameserver.gameCount + '): </b>' + names.join(', '));
+	gameserver.sendMessageToClient(socket, '<b class="text-info">Public Games (' + games + '): </b>' + names.join(', '));
 
 }, 'NYI');
 
-// /startgame command
-addCommand('startgame', function(socket, args) {
-	if(gameserver.getGamePlayerIsIn(socket) != null) {
-		gameserver.sendMessageToClient(socket, '<b class="text-warning">You are already in a game.</b>');
-		return;
-	}
+// /startgame and /startprivgame command
+addCommand('startgame', makeGame('startgame', false), 'Creates a new game.  Usage: <u>/startgame (max-players) (name)</u>');
+addCommand('startprivgame', makeGame('startprivgame', true), 'Creates a new private game. A password is randomly generated and must be given to anyone who wants to join. Private games do not appear in /listgames. Usage: <u>/startprivgame (max-players) (name)</u>');
 
-	if(args.length < 2) {
-		gameserver.sendMessageToClient(socket, '<b class="text-warning">Not enough arguments. Proper Usage: <span class="text-info">/startgame (max-players) (name)</span></b>');
-		return;
-	}
-	
-	var players = parseInt(args[0]);
-	if(isNaN(players) || players < minGamePlayers) {
-		gameserver.sendMessageToClient(socket, '<b class="text-warning">The amount of max players is invalid or is below ' + minGamePlayers + ', can\'t create game.</b>');
-		return;
-	}
-	
-	var name = args.splice(1).join(' ').trim();
-	
-	if(name.length > maxGameNameLength) {
-		gameserver.sendMessageToClient(socket, '<b class="text-warning">Your game\'s name can\'t be longer than ' + maxGameNameLength + ' characters.</b>');
-		return;
-	}
-	
-	if(name.match(/^[a-zA-Z0-9_]+$/) == null) {
-		gameserver.sendMessageToClient(socket, '<b class="text-warning">Your game\'s name can only contain alphanumerical characters or underscores.</b>');
-		return;
-	}
+function makeGame(cname, locked) {
+	return function(socket, args) {
+		if(gameserver.getGamePlayerIsIn(socket) != null) {
+			gameserver.sendMessageToClient(socket, '<b class="text-warning">You are already in a game.</b>');
+			return;
+		}
 
-	if(gameserver.getGameForName(name) != null) {
-		gameserver.sendMessageToClient(socket, '<b class="text-warning">That game name is already in use.</b>');
-		return;
-	}
-	
-	gameserver.addGame(socket, players, name);
-	gameserver.sendMessageToClient(socket, '<b class="text-success">Successfully created the game "' + name + '"</b>');
-	gameserver.sendMessageToAll('<i class="text-info">' + gameserver.getUsername(socket.id) + ' has created the game "' + name + '"</i>');
-}, 'Creates a new game.  Usage: <u>/startgame (max-players) (name)</u>');
+		if(args.length < 2) {
+			gameserver.sendMessageToClient(socket, '<b class="text-warning">Not enough arguments. Proper Usage: <span class="text-info">/' + cname + ' (max-players) (name)</span></b>');
+			return;
+		}
+		
+		var players = parseInt(args[0]);
+		if(isNaN(players) || players < minGamePlayers) {
+			gameserver.sendMessageToClient(socket, '<b class="text-warning">The amount of max players is invalid or is below ' + minGamePlayers + ', can\'t create game.</b>');
+			return;
+		}
+		
+		var name = args.splice(1).join(' ').trim();
+		
+		if(name.length > maxGameNameLength) {
+			gameserver.sendMessageToClient(socket, '<b class="text-warning">Your game\'s name can\'t be longer than ' + maxGameNameLength + ' characters.</b>');
+			return;
+		}
+		
+		if(name.match(/^[a-zA-Z0-9_]+$/) == null) {
+			gameserver.sendMessageToClient(socket, '<b class="text-warning">Your game\'s name can only contain alphanumerical characters or underscores.</b>');
+			return;
+		}
+
+		if(gameserver.getGameForName(name) != null) {
+			gameserver.sendMessageToClient(socket, '<b class="text-warning">That game name is already in use.</b>');
+			return;
+		}
+		
+		gameserver.addGame(socket, players, name, locked);
+		gameserver.sendMessageToClient(socket, '<b class="text-success">Successfully created the game "' + name + '"</b>');
+		if(!locked)
+			gameserver.sendMessageToAll('<i class="text-info">' + gameserver.getUsername(socket.id) + ' has created the game "' + name + '"</i>');
+	};
+}
 
 // /joingame command
 addCommand('joingame', function(socket, args) {
@@ -440,7 +474,16 @@ addCommand('joingame', function(socket, args) {
 	
 	var name = args.join(' ');
 	var game = gameserver.getGameForName(name);
-	game.tryJoinGame(socket);
+	var pass = '';
+	if(game == undefined) {
+		pass = args.pop();
+		name = args.join(' ');
+		game = gameserver.getGameForName(name);
+	}
+	
+	if(game != undefined)
+		game.tryJoinGame(socket, pass);
+	else gameserver.sendMessageToClient(socket, '<b class="text-warning">There\'s no game by that name. Try <span class="text-info">/listgames</span> to see public games.</b>');
 }, 'Joins a game. Usage: <u>/joingame (name)</u>');
 
 // /leavegame command

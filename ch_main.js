@@ -1,9 +1,11 @@
 // ============================================= Modules begin
 var fs = require('fs');
 var app = require('express')();
-var http = require('http').Server(app);
+var http = require('http');
+var server = http.Server(app);
 var util = require('util');
 var validator = require('validator');
+var request = require('request');
 // ============================================= Modules end
 
 // ============================================= Main begin
@@ -20,7 +22,7 @@ var gameRoundTime = config['game_round_time'];
 var intervalTime = config['inteval_time'];
 var allowGlobalChat = config['allow_global_chat'] == 'true';
 
-var io = require('socket.io')(http, {
+var io = require('socket.io')(server, {
 	'close timeout': timeout,
 	'heartbeat timeout': timeout
 });
@@ -39,7 +41,7 @@ app.get('/', function(req, res){
 	else res.send('No known response for ' + url);
 });
 
-http.listen(port, function() {
+server.listen(port, function() {
 	console.log('HTTP Server running on port ' + port);
 });
 
@@ -329,12 +331,9 @@ Game.prototype.getListString = function() {
 }
 
 Game.prototype.addCardcast = function(socket, id) {
-	if(this.isHost(socket)) {
-		var deckName = this.deck.addCardcast(id);
-		if(deckName != undefined)
-			gameserver.sendMessageToClient(socket, '<b class="text-success">Successfuly added ' + deckName + ' to the list of decks playing.</b>');
-		else gameserver.sendMessageToClient(socket, '<b class="text-warning">Couldn\'t add the deck. It was either already there or something went wrong internally.</b>');
-	} else gameserver.sendMessageToClient(socket, '<b class="text-warning">You are not this game\'s host.</b>');
+	if(this.isHost(socket))
+		this.deck.addCardcast(socket, id);
+	else gameserver.sendMessageToClient(socket, '<b class="text-warning">You are not this game\'s host.</b>');
 }
 
 // Game logic
@@ -369,38 +368,51 @@ var Deck = function() {
 	this.decksAdded = [ ];
 }
 
-Deck.prototype.addCardcast = function(ccId) {
+Deck.prototype.addCardcast = function(socket, ccId) {
+	gameserver.sendMessageToClient(socket, '<b class="text-info">Adding deck ' + ccId + ', please wait a bit as we get the info...<b>');
+	
 	var deckId = 'cc_' + ccId;
 	if(deckId in this.decksAdded)
-		return undefined;
+		return gameserver.sendMessageToClient(socket, '<b class="text-warning">Couldn\'t add the deck. It was either already there or something went wrong internally.</b>');
 	
-	var ccHost = 'https://api.cardcastgame.com';
+	var host = 'https://api.cardcastgame.com';
 	var deckPath = '/v1/decks/' + ccId;
 	var callsPath = deckPath + '/calls';
 	var responsesPath = deckPath + '/responses';
 	var deckName = undefined;
 	
-	http.call({ host: ccHost, path: deckPath }, function(resp) {
-		deckName = resp.name;
-		http.call({ host: ccHost, path: callsPath }, loadCardCastJson(deckName, calls, true)).end();
-		http.call({ host: ccHost, path: responsesPath }, loadCardCastJson(deckName, responses, false)).end();
+	var deck = this;
+	request(host + deckPath, function(error, response, body) {
+		if(!error && response.statusCode == 200) {
+			var bodyObj = JSON.parse(body);
+			deckName = bodyObj.name;
+			console.log('Deck name is ' + deckName);
+			
+			request(host + callsPath, function(error1, response1, body1) {
+				deck.makeLoadCardCastJsonFunction(deckName, deck.calls, true)(error1, response1, body1);
+				request(host + responsesPath, function(error2, response2, body2) {
+					deck.makeLoadCardCastJsonFunction(deckName, deck.responses, false)(error2, response2, body2);
+					deck.decksAdded.push(deckId);
+					gameserver.sendMessageToClient(socket, '<b class="text-success">Successfuly added ' + deckName + ' to the list of decks playing.</b>');
+				});
+			});
+		}
 	});
-	
-	this.decksAdded.push(deckId);
-	return deckName;
 }
 
-Deck.prototype.loadCardCastJson = function(deckname, obj, blackCard) {
-	return function(json) {
-		var cardsArr = JSON.parseJSON(json);
-		for(i in cardsArr) {
-			var cardObj = cardsArr[i];
-			var card = { 
-				text: cardObj.text,
-				deck: deckname,
-				black: blackCard
-			};
-			obj[cardObj.id] = card;
+Deck.prototype.makeLoadCardCastJsonFunction = function(deckname, obj, blackCard) {
+	return function(error, response, body) {
+		if(!error && response.statusCode == 200) {
+			var cardsArr = JSON.parse(body);
+			for(i in cardsArr) {
+				var cardObj = cardsArr[i];
+				var card = { 
+					text: cardObj.text,
+					deck: deckname,
+					black: blackCard
+				};
+				obj[cardObj.id] = card;
+			}
 		}
 	};
 }

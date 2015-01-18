@@ -2,18 +2,19 @@ var socket = io();
 var dcd = false;
 
 var username = '';
+var defPlayfield = '';
 
 $(function() {
 	$.material.init();
 
+	defPlayfield = $('#playfield').html();
+	
 	// TODO
-	populateCards();
-	populatePlayers();
 	setUsernameField();
 	onResize();
 });
 
-$(".cah-card").click(function() {
+$(document).on('click', '.cah-card', function() {
 	var card = $(this);
 	var parent = card.parent();
 	if(parent.hasClass('card-group'))
@@ -55,20 +56,6 @@ function deselectCards() {
 		var checkbox = $(this).find('.card-checkbox');
 		checkbox.fadeOut(400);
 	});
-}
-
-function populateCards() {
-	$('.cah-card').each(function(e) {
-		var html = "<div class='card-text'>" + findSpaces($(this).attr('data-text')) + "</div><div class='card-deck'><div class='checkbox card-checkbox'><label><input type='checkbox' class='card-selector-checkbox' disabled='true' checked></label></div>" + $(this).attr('data-deck') + "</div>";
-	
-		$(this).html(html);
-	});
-	
-	$.material.init();
-}
-
-function findSpaces(str) {
-	return str.replace(/_/g, "<b>___</b>");
 }
 
 function setUsernameField() {
@@ -158,7 +145,35 @@ socket.on('game-state', function(data) {
 	}
 });
 
+socket.on('play-cards', function(data) {
+	var playfield = $('#playfield');
+	
+	var cardArray = data.cards;
+	if(data.override)
+		playfield.html(defPlayfield);
+	
+	var html = playfield.html();
+	for(i in cardArray) {
+		var card = cardArray[i];
+		var text = card.text.join('<b>___</b>');
+		var clazz = 'cah-card' + (card.black ? ' cah-card-black' : '');
+		html += '<div class="' + clazz + '"><div class="card-text">' + text + '</div><div class="card-deck"><div class="checkbox card-checkbox"><label><input type="checkbox" class="card-selector-checkbox" disabled="true" checked></label></div><div class="card-deck-text">' + card.deck + '</div></div></div>';
+	}
+	
+	playfield.html(html);
+	
+	var noCards = $(document).find('#no-cards-played');
+	if(cardArray.length == 0) {
+		if(noCards.css('display') == 'none')
+			noCards.fadeIn();
+	} else if(noCards.css('display') != 'none')
+		noCards.fadeOut();
+	
+	$.material.init();
+});
+
 function setNotInGame() {
+	$('#playfield').html(defPlayfield);
 	if($('#spanel-lobby-interface').css('display') == 'none')
 		$('#spanel-game-interface').fadeOut(function() {			
 			$('#spanel-lobby-interface').fadeIn();

@@ -250,7 +250,7 @@ var Game = function(host, maxPlayers, name, locked) {
 	this.playerCount = 0;
 	this.playing = false;
 	this.password = locked ? gameserver.makeGamePassword(8) : '';
-	this.deck = new Deck();
+	this.deck = new Deck(this);
 	
 	this.joinGame(host);
 }
@@ -349,20 +349,23 @@ Game.prototype.setPlayerAwesomePoints = function(socket, points) {
 	gameserver.playerProfiles[gameserver.getSocketId(socket)].points = points;
 }
 
-
 Game.prototype.playCard = function(socket, card) {
 	var cards = [ card ];
 	this.playCards(socket, cards, false);
 }
 
-Game.prototype.playCards = function(socket, cards, override) {
-	socket.emit('play-cards', cards);
+Game.prototype.playCards = function(socket, cardsArray, overrideCards) {
+	socket.emit('play-cards', {
+		cards: cardsArray,
+		override: overrideCards
+	});
 }
 
 // ============================================= Game end
 
 // ============================================= Deck begin
-var Deck = function() {
+var Deck = function(game) {	
+	this.game = game;
 	this.calls = { };
 	this.responses = { };
 	this.decksAdded = [ ];
@@ -394,6 +397,10 @@ Deck.prototype.addCardcast = function(socket, ccId) {
 					deck.makeLoadCardCastJsonFunction(deckName, deck.responses, false)(error2, response2, body2);
 					deck.decksAdded.push(deckId);
 					gameserver.sendMessageToClient(socket, '<b class="text-success">Successfuly added ' + deckName + ' to the list of decks playing.</b>');
+					
+					// TODO
+					deck.game.playCard(socket, deck.drawCall());
+					deck.game.playCard(socket, deck.drawResponse());
 				});
 			});
 		}
@@ -415,6 +422,22 @@ Deck.prototype.makeLoadCardCastJsonFunction = function(deckname, obj, blackCard)
 			}
 		}
 	};
+}
+
+Deck.prototype.drawCall = function() {
+	return this.draw(this.calls);
+}
+
+Deck.prototype.drawResponse = function() {
+	return this.draw(this.responses);
+}
+
+Deck.prototype.draw = function(obj) {
+	var key = randomObjKey(obj);
+	var card = obj[key];
+	delete obj[key];
+	
+	return card;
 }
 
 // ============================================= Deck end
@@ -599,6 +622,16 @@ addCommand('addcc', function(socket, args) {
 
 function getRandomArbitrary(min, max) {
   return Math.floor(Math.random() * (max - min) + min);
+}
+
+// From http://stackoverflow.com/a/2532251
+function randomObjKey(obj) {
+    var result;
+    var count = 0;
+    for (var prop in obj)
+        if (Math.random() < 1/++count)
+           result = prop;
+    return result;
 }
 
 // ============================================= Misc end

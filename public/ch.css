@@ -68,7 +68,7 @@
 }
 
 .card-text {
-	font-size: 17px;
+	font-size: 14px;
 	height: 125px;
 }
 
@@ -93,8 +93,13 @@
 .card-checkbox {
 	display: none;
 	margin-top: -11px;
-	margin-right: 24px;
+	margin-right: 29px;
 	padding-top: 1px;
+}
+
+.card-deck-text {
+	display: inline-block;
+	width: 70px;
 }
 
 .card-group {
